@@ -1,4 +1,4 @@
-# AdBlockDesi
+# Video Ad Blocker Desi
 
 A simple Chrome extension scaffold that attempts to skip video ads automatically while videos are playing.
 

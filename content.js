@@ -16,20 +16,15 @@ const SKIP_BUTTON_SELECTORS = [
 const GENERIC_AD_OVERLAY_SELECTORS = [
   '.ad-container',
   '.ad-overlay',
-  '.advertisement',
   '.video-ads',
   '.adbreak',
-  '.ad-block',
-  '.ad-area',
   '.ad-interrupting',
   '.vjs-ad-overlay',
-  '.vast-ad',
+  '.jw-ad-overlay',
   '.jw-ad',
   '.skip-ad',
-  '[data-ad]',
-  '[data-ads]',
-  '[data-advertisement]',
-  '[aria-label*="advertisement" i]'
+  '.ad-layer',
+  '.ad-ui'
 ];
 
 const YOUTUBE_AD_SELECTORS = [
@@ -57,6 +52,22 @@ function clickElement(element) {
   return false;
 }
 
+function safeQuerySelectorAll(root, selector) {
+  try {
+    return Array.from(root.querySelectorAll(selector));
+  } catch (error) {
+    return [];
+  }
+}
+
+function safeQuerySelector(root, selector) {
+  try {
+    return root.querySelector(selector);
+  } catch (error) {
+    return null;
+  }
+}
+
 const AD_CONTAINER_SELECTORS = [
   ...GENERIC_AD_OVERLAY_SELECTORS,
   ...YOUTUBE_AD_SELECTORS
@@ -70,31 +81,27 @@ const SAFER_GLOBAL_SKIP_SELECTORS = [
 
 function clickSkipButtons() {
   SAFER_GLOBAL_SKIP_SELECTORS.forEach(selector => {
-    document.querySelectorAll(selector).forEach(clickElement);
+    safeQuerySelectorAll(document, selector).forEach(clickElement);
   });
 
-  const adContainers = Array.from(new Set([
-    ...document.querySelectorAll(AD_CONTAINER_SELECTORS.join(','))
-  ]));
+  const adContainers = Array.from(new Set(
+    safeQuerySelectorAll(document, AD_CONTAINER_SELECTORS.join(','))
+  ));
 
   adContainers.forEach(container => {
-    container.querySelectorAll('button, a, [role="button"]').forEach(el => {
+    safeQuerySelectorAll(container, 'button, a, [role="button"]').forEach(el => {
       const text = (el.innerText || el.getAttribute('aria-label') || '').trim().toLowerCase();
       if (/(skip|close|dismiss|no thanks|continue)/i.test(text) && isVisible(el)) {
         clickElement(el);
       }
-    });
-
-    AD_CONTAINER_SELECTORS.forEach(selector => {
-      container.querySelectorAll(selector).forEach(clickElement);
     });
   });
 }
 
 function hideAdOverlays() {
   AD_CONTAINER_SELECTORS.forEach(selector => {
-    document.querySelectorAll(selector).forEach(el => {
-      if (isVisible(el) && !el.closest('video')) {
+    safeQuerySelectorAll(document, selector).forEach(el => {
+      if (isVisible(el) && !el.closest('video') && !el.closest('.ytp-chrome-controls')) {
         el.style.setProperty('display', 'none', 'important');
         el.style.setProperty('visibility', 'hidden', 'important');
       }
@@ -112,7 +119,7 @@ function getYouTubeVideo() {
 
 function isYouTubeAdPlaying() {
   return YOUTUBE_AD_SELECTORS.some(selector => {
-    const element = document.querySelector(selector);
+    const element = safeQuerySelector(document, selector);
     return element && isVisible(element);
   }) || (document.body && document.body.classList.contains('ad-showing'));
 }
@@ -123,11 +130,11 @@ function isVideoOrAdPage() {
   }
 
   return Boolean(
-    document.querySelector('video') ||
-    document.querySelector('iframe[src*="youtube.com"]') ||
-    document.querySelector('iframe[src*="vimeo.com"]') ||
-    document.querySelector(GENERIC_AD_OVERLAY_SELECTORS.join(',')) ||
-    YOUTUBE_AD_SELECTORS.some(selector => document.querySelector(selector))
+    safeQuerySelector(document, 'video') ||
+    safeQuerySelector(document, 'iframe[src*="youtube.com"]') ||
+    safeQuerySelector(document, 'iframe[src*="vimeo.com"]') ||
+    safeQuerySelector(document, GENERIC_AD_OVERLAY_SELECTORS.join(',')) ||
+    YOUTUBE_AD_SELECTORS.some(selector => safeQuerySelector(document, selector))
   );
 }
 
@@ -155,31 +162,39 @@ function skipYouTubeAds() {
   }
 }
 
+function isAdVideoElement(video) {
+  if (!video) {
+    return false;
+  }
+
+  const adSelectorMatch = video.closest(AD_CONTAINER_SELECTORS.join(','));
+
+  return Boolean(
+    /ad|advertisement|promo/i.test(video.className || '') ||
+    /ad|advertisement|promo/i.test(video.id || '') ||
+    /ad|advertisement|promo/i.test(video.poster || '') ||
+    adSelectorMatch
+  );
+}
+
 function skipGenericVideoAds() {
   document.querySelectorAll('video').forEach(video => {
     if (!video || video.readyState === 0 || video.ended || !isFinite(video.duration)) {
       return;
     }
 
-    const adMeta = [
-      video.className && /ad|advertisement|promo/i.test(video.className),
-      video.id && /ad|advertisement|promo/i.test(video.id),
-      video.poster && /ad|advertisement|promo/i.test(video.poster),
-      video.closest('[class*=ad], [id*=ad], [data-ad], .vjs-ad-overlay, .jw-ad-overlay'),
-      document.querySelector(GENERIC_AD_OVERLAY_SELECTORS.join(','))
-    ].some(Boolean);
-
-    if (adMeta || video.currentTime < 1 && isVisible(video.closest('.ad-overlay, .video-ads, .advertisement, .vjs-ad-overlay, .jw-ad-overlay'))) {
-      clickSkipButtons();
-      hideAdOverlays();
-
-      if (video.currentTime + 0.5 < video.duration) {
-        video.currentTime = Math.max(0, video.duration - 0.1);
-      }
-
-      video.play().catch(() => {});
-      video.playbackRate = Math.max(1, Math.min(16, video.playbackRate));
+    if (!isAdVideoElement(video)) {
+      return;
     }
+
+    clickSkipButtons();
+    hideAdOverlays();
+
+    if (video.currentTime + 0.5 < video.duration) {
+      video.currentTime = Math.max(0, video.duration - 0.1);
+    }
+
+    video.play().catch(() => {});
   });
 }
 
