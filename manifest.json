@@ -3,14 +3,19 @@
   "name": "Video Ad Blocker Desi",
   "description": "Skip video ads automatically on supported players and HTML5 video sites.",
   "version": "1.0.0",
-  "permissions": [
-    "activeTab",
-    "scripting"
-  ],
+  "permissions": [],
   "icons": {
-    "16": "icons/icon16.svg",
-    "48": "icons/icon48.svg",
-    "128": "icons/icon128.svg"
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Video Ad Blocker Desi"
   },
   "content_scripts": [
     {
