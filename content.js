@@ -93,7 +93,21 @@ function isYouTubeAdPlaying() {
   return YOUTUBE_AD_SELECTORS.some(selector => {
     const element = document.querySelector(selector);
     return element && isVisible(element);
-  }) || document.body.classList.contains('ad-showing');
+  }) || (document.body && document.body.classList.contains('ad-showing'));
+}
+
+function isVideoOrAdPage() {
+  if (!document.body) {
+    return false;
+  }
+
+  return Boolean(
+    document.querySelector('video') ||
+    document.querySelector('iframe[src*="youtube.com"]') ||
+    document.querySelector('iframe[src*="vimeo.com"]') ||
+    document.querySelector(GENERIC_AD_OVERLAY_SELECTORS.join(',')) ||
+    YOUTUBE_AD_SELECTORS.some(selector => document.querySelector(selector))
+  );
 }
 
 function skipYouTubeAds() {
@@ -149,6 +163,10 @@ function skipGenericVideoAds() {
 }
 
 function runSkipCycle() {
+  if (!isVideoOrAdPage()) {
+    return;
+  }
+
   try {
     clickSkipButtons();
     hideAdOverlays();
