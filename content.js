@@ -57,23 +57,44 @@ function clickElement(element) {
   return false;
 }
 
+const AD_CONTAINER_SELECTORS = [
+  ...GENERIC_AD_OVERLAY_SELECTORS,
+  ...YOUTUBE_AD_SELECTORS
+];
+
+const SAFER_GLOBAL_SKIP_SELECTORS = [
+  'button.ytp-ad-skip-button',
+  '.videoAdUiSkipButton',
+  '.ytp-ad-text-overlay'
+];
+
 function clickSkipButtons() {
-  SKIP_BUTTON_SELECTORS.forEach(selector => {
+  SAFER_GLOBAL_SKIP_SELECTORS.forEach(selector => {
     document.querySelectorAll(selector).forEach(clickElement);
   });
 
-  document.querySelectorAll('button, a, [role="button"]').forEach(el => {
-    const text = (el.innerText || el.getAttribute('aria-label') || '').trim().toLowerCase();
-    if (/(skip|close|dismiss|no thanks|continue)/i.test(text) && isVisible(el)) {
-      clickElement(el);
-    }
+  const adContainers = Array.from(new Set([
+    ...document.querySelectorAll(AD_CONTAINER_SELECTORS.join(','))
+  ]));
+
+  adContainers.forEach(container => {
+    container.querySelectorAll('button, a, [role="button"]').forEach(el => {
+      const text = (el.innerText || el.getAttribute('aria-label') || '').trim().toLowerCase();
+      if (/(skip|close|dismiss|no thanks|continue)/i.test(text) && isVisible(el)) {
+        clickElement(el);
+      }
+    });
+
+    AD_CONTAINER_SELECTORS.forEach(selector => {
+      container.querySelectorAll(selector).forEach(clickElement);
+    });
   });
 }
 
 function hideAdOverlays() {
-  GENERIC_AD_OVERLAY_SELECTORS.forEach(selector => {
+  AD_CONTAINER_SELECTORS.forEach(selector => {
     document.querySelectorAll(selector).forEach(el => {
-      if (isVisible(el)) {
+      if (isVisible(el) && !el.closest('video')) {
         el.style.setProperty('display', 'none', 'important');
         el.style.setProperty('visibility', 'hidden', 'important');
       }
@@ -162,6 +183,8 @@ function skipGenericVideoAds() {
   });
 }
 
+let mutationScheduled = false;
+
 function runSkipCycle() {
   if (!isVideoOrAdPage()) {
     return;
@@ -177,16 +200,28 @@ function runSkipCycle() {
   }
 }
 
+function scheduleSkipCycle() {
+  if (mutationScheduled) {
+    return;
+  }
+
+  mutationScheduled = true;
+  requestAnimationFrame(() => {
+    mutationScheduled = false;
+    runSkipCycle();
+  });
+}
+
 const observer = new MutationObserver(() => {
-  runSkipCycle();
+  scheduleSkipCycle();
 });
 
-observer.observe(document.documentElement || document.body, {
+observer.observe(document.body || document.documentElement, {
   childList: true,
   subtree: true
 });
 
-setInterval(runSkipCycle, 700);
+setInterval(runSkipCycle, 1400);
 
 window.addEventListener('load', () => {
   runSkipCycle();
