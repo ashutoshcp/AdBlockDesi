@@ -203,32 +203,6 @@ function processAds() {
   skipGenericVideoAds();
 }
 
-function createAdObserver() {
-  const callback = () => processAds();
-
-  const observer = new MutationObserver(callback);
-  observer.observe(document.documentElement || document, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    characterData: true
-  });
-
-  return observer;
-}
-
-function startAdSkipper() {
-  processAds();
-  createAdObserver();
-  setInterval(processAds, 1000);
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startAdSkipper);
-} else {
-  startAdSkipper();
-}
-
 let mutationScheduled = false;
 
 function runSkipCycle() {
@@ -262,13 +236,14 @@ const observer = new MutationObserver(() => {
   scheduleSkipCycle();
 });
 
-observer.observe(document.body || document.documentElement, {
+observer.observe(document.body || document.documentElement || document, {
   childList: true,
-  subtree: true
+  subtree: true,
+  attributes: true,
+  characterData: true
 });
 
+runSkipCycle();
 setInterval(runSkipCycle, 1400);
+window.addEventListener('load', runSkipCycle);
 
-window.addEventListener('load', () => {
-  runSkipCycle();
-});
