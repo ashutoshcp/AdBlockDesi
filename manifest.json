@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "AdBlockDesi Video Ad Skipper",
+  "description": "Skip video ads automatically on supported players and HTML5 video sites.",
+  "version": "1.0.0",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
