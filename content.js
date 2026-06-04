@@ -198,6 +198,37 @@ function skipGenericVideoAds() {
   });
 }
 
+function processAds() {
+  skipYouTubeAds();
+  skipGenericVideoAds();
+}
+
+function createAdObserver() {
+  const callback = () => processAds();
+
+  const observer = new MutationObserver(callback);
+  observer.observe(document.documentElement || document, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    characterData: true
+  });
+
+  return observer;
+}
+
+function startAdSkipper() {
+  processAds();
+  createAdObserver();
+  setInterval(processAds, 1000);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startAdSkipper);
+} else {
+  startAdSkipper();
+}
+
 let mutationScheduled = false;
 
 function runSkipCycle() {
